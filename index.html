@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Back On Track</title>
+<style>
+  :root{
+    --bg:#0b1020;--panel:#131a2e;--panel2:#0f1530;--line:#26314f;--text:#f4f7ff;--muted:#aab4d0;
+    --blue:#69a7ff;--green:#5dd39e;--orange:#ffb35c;--red:#ff7a7a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(180deg,#08101d,#0b1020 35%,#0e1430);color:var(--text)}
+  .app{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+  .sidebar{background:#0a1022;border-right:1px solid var(--line);padding:18px}
+  .brand{font-size:22px;font-weight:800;margin-bottom:4px}
+  .sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+  .nav button{width:100%;text-align:left;background:transparent;color:var(--text);border:1px solid transparent;padding:12px 14px;border-radius:12px;margin-bottom:8px}
+  .nav button.active{background:var(--panel);border-color:var(--line)}
+  .main{padding:20px}
+  .top{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap}
+  .top h1{margin:0;font-size:26px}
+  .btn{background:var(--blue);color:#08101d;border:none;padding:11px 14px;border-radius:12px;font-weight:700;cursor:pointer}
+  .btn.orange{background:var(--orange);color:#1d1300}
+  .btn.secondary{background:#1b2341;color:var(--text);border:1px solid var(--line)}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;margin-top:18px}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:18px;padding:16px}
+  .span-8{grid-column:span 8}.span-4{grid-column:span 4}.span-3{grid-column:span 3}.span-6{grid-column:span 6}
+  @media (max-width:1100px){.span-8,.span-6,.span-4,.span-3{grid-column:span 12}.app{grid-template-columns:1fr}}
+  .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .big{font-size:30px;font-weight:800;margin-top:6px}
+  .status{display:inline-flex;align-items:center;padding:7px 10px;border-radius:999px;font-size:12px;font-weight:700}
+  .status.green{background:rgba(93,211,158,.14);color:#9cf2cb}
+  .status.orange{background:rgba(255,179,92,.15);color:#ffd29b}
+  .status.red{background:rgba(255,122,122,.13);color:#ffb0b0}
+  .section-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+  .section-title h2{font-size:18px;margin:0}
+  .list{display:flex;flex-direction:column;gap:10px}
+  .item{border:1px solid var(--line);border-radius:14px;padding:12px;background:rgba(255,255,255,.02)}
+  .assignment{cursor:pointer}
+  .assignment.active{outline:2px solid var(--blue);background:rgba(105,167,255,.08)}
+  .muted{color:var(--muted)}
+  .tiny{font-size:12px}
+  textarea{width:100%;min-height:160px;background:#0b1227;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit;resize:vertical}
+  .helper-box{min-height:300px;white-space:pre-wrap;line-height:1.5}
+  .pill{padding:5px 8px;border-radius:999px;font-size:11px;font-weight:700}
+  .pill.red{background:rgba(255,122,122,.13);color:#ffb0b0}
+  .pill.orange{background:rgba(255,179,92,.15);color:#ffd29b}
+  .footer-note{margin-top:12px;color:var(--muted);font-size:12px}
+  .error{color:#ffb0b0;font-size:13px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">Back On Track</div>
+    <div class="sub">Real Canvas + Gemini build</div>
+    <div class="nav">
+      <button class="active">Dashboard</button>
+      <button>Assignments</button>
+      <button>Homework Helper</button>
+    </div>
+    <div class="card" style="margin-top:18px;padding:12px">
+      <div class="label">Connections</div>
+      <div style="margin-top:10px" class="list tiny">
+        <div>Canvas <span id="canvasState" class="status orange" style="float:right">Waiting</span></div>
+        <div>Gemini <span id="geminiState" class="status orange" style="float:right">Waiting</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top">
+      <div>
+        <h1>Student Workflow Dashboard</h1>
+        <div class="muted">Pull real assignments, then send one to Gemini.</div>
+      </div>
+      <div>
+        <button id="syncCanvasBtn" class="btn">Sync Canvas</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="card span-3">
+        <div class="label">Past Due</div>
+        <div id="pastDueCount" class="big">0</div>
+        <div class="status orange">Needs attention</div>
+      </section>
+      <section class="card span-3">
+        <div class="label">Current</div>
+        <div id="currentCount" class="big">0</div>
+        <div class="status green">Active</div>
+      </section>
+      <section class="card span-6">
+        <div class="label">Selected Assignment</div>
+        <div id="selectedTitle" class="big" style="font-size:18px">None selected</div>
+        <div class="muted tiny" id="selectedClass">Click an assignment below</div>
+      </section>
+
+      <section class="card span-4">
+        <div class="section-title">
+          <h2>Assignments</h2>
+          <span class="tiny muted">Real Canvas data only</span>
+        </div>
+        <div id="assignmentList" class="list">
+          <div class="item muted">Click Sync Canvas.</div>
+        </div>
+        <div id="canvasError" class="error"></div>
+      </section>
+
+      <section class="card span-8">
+        <div class="section-title">
+          <h2>AI Homework Helper</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="runHelperBtn" class="btn orange">Run Helper</button>
+            <button id="copyHelperBtn" class="btn secondary">Copy</button>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label class="label" style="display:block;margin-bottom:6px">Assignment Text</label>
+            <textarea id="assignmentText"></textarea>
+          </div>
+          <div>
+            <label class="label" style="display:block;margin-bottom:6px">Gemini Output</label>
+            <div id="helperOutput" class="item helper-box">Pick an assignment, then click Run Helper.</div>
+          </div>
+        </div>
+        <div id="helperError" class="error"></div>
+        <div class="footer-note">No mock mode. Real errors only.</div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+const state = { assignments: [], selectedAssignment: null, helperResult: "" };
+
+function byId(id){ return document.getElementById(id); }
+
+function setStatus(id, kind, text){
+  const el = byId(id);
+  el.className = 'status ' + kind;
+  el.textContent = text;
+}
+
+function renderStats(){
+  byId('pastDueCount').textContent = state.assignments.filter(a => a.status === 'past_due').length;
+  byId('currentCount').textContent = state.assignments.filter(a => a.status !== 'past_due').length;
+}
+
+function renderAssignments(){
+  const list = byId('assignmentList');
+  list.innerHTML = '';
+  if(!state.assignments.length){
+    list.innerHTML = '<div class="item muted">No assignments returned from Canvas.</div>';
+    return;
+  }
+
+  state.assignments.forEach(a => {
+    const div = document.createElement('div');
+    div.className = 'item assignment' + ((state.selectedAssignment && state.selectedAssignment.id === a.id) ? ' active' : '');
+    div.innerHTML = `
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:start">
+        <div>
+          <div style="font-weight:800">${a.name}</div>
+          <div class="tiny muted">${a.course}</div>
+          <div class="tiny muted">Due: ${a.due_at || 'No date'}</div>
+        </div>
+        <span class="pill ${a.status==='past_due'?'red':'orange'}">${a.status.replace('_',' ')}</span>
+      </div>
+      <div class="tiny muted" style="margin-top:8px">${a.description || ''}</div>
+    `;
+    div.onclick = () => selectAssignment(a.id);
+    list.appendChild(div);
+  });
+}
+
+function selectAssignment(id){
+  state.selectedAssignment = state.assignments.find(a => a.id === id) || null;
+  byId('selectedTitle').textContent = state.selectedAssignment ? state.selectedAssignment.name : 'None selected';
+  byId('selectedClass').textContent = state.selectedAssignment ? state.selectedAssignment.course : 'Click an assignment below';
+  byId('assignmentText').value = state.selectedAssignment ? (state.selectedAssignment.description || '') : '';
+  renderAssignments();
+}
+
+async function syncCanvas(){
+  byId('canvasError').textContent = '';
+  try{
+    const res = await fetch('/.netlify/functions/canvas-sync');
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || ('Canvas error ' + res.status));
+
+    state.assignments = (data.assignments || []).map((a, idx) => ({
+      id: String(a.id || idx + 1),
+      course: a.course || a.className || 'Course',
+      name: a.name || a.title || 'Assignment',
+      due_at: a.due_at || a.dueDate || '',
+      status: a.status || 'current',
+      description: a.description || a.assignmentText || ''
+    }));
+
+    if(state.assignments.length) selectAssignment(state.assignments[0].id);
+    renderAssignments();
+    renderStats();
+    setStatus('canvasState', 'green', 'Connected');
+  }catch(err){
+    state.assignments = [];
+    renderAssignments();
+    renderStats();
+    setStatus('canvasState', 'red', 'Error');
+    byId('canvasError').textContent = err.message;
+  }
+}
+
+async function runHelper(){
+  byId('helperError').textContent = '';
+  if(!state.selectedAssignment){
+    byId('helperError').textContent = 'Select an assignment first.';
+    return;
+  }
+  byId('helperOutput').textContent = 'Working...';
+
+  try{
+    const res = await fetch('/.netlify/functions/homework-helper', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        className: state.selectedAssignment.course,
+        assignmentTitle: state.selectedAssignment.name,
+        assignmentText: byId('assignmentText').value.trim() || state.selectedAssignment.description || ''
+      })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || ('Gemini error ' + res.status));
+
+    state.helperResult = data.result || '';
+    byId('helperOutput').textContent = state.helperResult || 'No response returned.';
+    setStatus('geminiState', 'green', 'Connected');
+  }catch(err){
+    byId('helperOutput').textContent = 'No result.';
+    setStatus('geminiState', 'red', 'Error');
+    byId('helperError').textContent = err.message;
+  }
+}
+
+byId('syncCanvasBtn').onclick = syncCanvas;
+byId('runHelperBtn').onclick = runHelper;
+byId('copyHelperBtn').onclick = async () => {
+  try { await navigator.clipboard.writeText(byId('helperOutput').textContent); } catch(e) {}
+};
+</script>
+</body>
+</html>
