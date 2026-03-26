@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Student Workflow Dashboard</title>
+<style>
+  :root{
+    --bg:#0b1020;--panel:#131a2e;--panel2:#0f1530;--line:#26314f;--text:#f4f7ff;--muted:#aab4d0;
+    --blue:#69a7ff;--green:#5dd39e;--orange:#ffb35c;--red:#ff7a7a;--purple:#b79cff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(180deg,#08101d,#0b1020 35%,#0e1430);color:var(--text)}
+  .app{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+  .sidebar{background:#0a1022;border-right:1px solid var(--line);padding:18px;position:sticky;top:0;height:100vh}
+  .brand{font-size:22px;font-weight:800;margin-bottom:4px}
+  .sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+  .nav button{width:100%;text-align:left;background:transparent;color:var(--text);border:1px solid transparent;padding:12px 14px;border-radius:12px;margin-bottom:8px;cursor:pointer}
+  .nav button.active,.nav button:hover{background:var(--panel);border-color:var(--line)}
+  .main{padding:20px}
+  .top{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap}
+  .top h1{margin:0;font-size:26px}
+  .top .right{display:flex;gap:10px;flex-wrap:wrap}
+  .btn{background:var(--blue);color:#08101d;border:none;padding:11px 14px;border-radius:12px;font-weight:700;cursor:pointer}
+  .btn.secondary{background:#1b2341;color:var(--text);border:1px solid var(--line)}
+  .btn.green{background:var(--green)}
+  .btn.orange{background:var(--orange);color:#1d1300}
+  .btn.red{background:var(--red)}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;margin-top:18px}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 8px 30px rgba(0,0,0,.18)}
+  .span-12{grid-column:span 12}.span-8{grid-column:span 8}.span-6{grid-column:span 6}.span-4{grid-column:span 4}.span-3{grid-column:span 3}
+  @media (max-width:1100px){.span-8,.span-6,.span-4,.span-3{grid-column:span 12}.app{grid-template-columns:1fr}.sidebar{position:static;height:auto}}
+  .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .big{font-size:30px;font-weight:800;margin-top:6px}
+  .status{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border-radius:999px;font-size:12px;font-weight:700}
+  .status.green{background:rgba(93,211,158,.14);color:#9cf2cb}
+  .status.orange{background:rgba(255,179,92,.15);color:#ffd29b}
+  .status.red{background:rgba(255,122,122,.13);color:#ffb0b0}
+  .status.purple{background:rgba(183,156,255,.13);color:#d7c6ff}
+  .section-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+  .section-title h2{font-size:18px;margin:0}
+  .list{display:flex;flex-direction:column;gap:10px}
+  .item{border:1px solid var(--line);border-radius:14px;padding:12px;background:rgba(255,255,255,.02)}
+  .assignment{cursor:pointer}
+  .assignment.active{outline:2px solid var(--blue);background:rgba(105,167,255,.08)}
+  .muted{color:var(--muted)}
+  .tiny{font-size:12px}
+  textarea,input,select{width:100%;background:#0b1227;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit}
+  textarea{min-height:120px;resize:vertical}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:700px){.row{grid-template-columns:1fr}}
+  .helper-box{min-height:280px;white-space:pre-wrap;line-height:1.5}
+  .calendar-preview .slot{padding:10px;border:1px dashed var(--line);border-radius:12px;margin-bottom:8px}
+  .pill{padding:5px 8px;border-radius:999px;font-size:11px;font-weight:700}
+  .pill.red{background:rgba(255,122,122,.13);color:#ffb0b0}
+  .pill.orange{background:rgba(255,179,92,.15);color:#ffd29b}
+  .pill.green{background:rgba(93,211,158,.14);color:#9cf2cb}
+  .footer-note{margin-top:12px;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">Back On Track</div>
+    <div class="sub">Canvas + Google + Gemini dashboard</div>
+    <div class="nav">
+      <button class="active">Dashboard</button>
+      <button>Assignments</button>
+      <button>Homework Helper</button>
+      <button>Smart Scheduler</button>
+      <button>Calendar</button>
+      <button>Email Drafts</button>
+      <button>Mom Assistant</button>
+      <button>Settings</button>
+    </div>
+    <div class="card" style="margin-top:18px;padding:12px">
+      <div class="label">Connections</div>
+      <div style="margin-top:10px" class="list tiny">
+        <div>Canvas <span id="canvasState" class="status orange" style="float:right">Not tested</span></div>
+        <div>Gemini <span id="geminiState" class="status orange" style="float:right">Not tested</span></div>
+        <div>Google Calendar <span id="calendarState" class="status orange" style="float:right">Not tested</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="top">
+      <div>
+        <h1>Student Workflow Dashboard</h1>
+        <div class="muted">One place for assignments, AI help, and study scheduling.</div>
+      </div>
+      <div class="right">
+        <button id="syncCanvasBtn" class="btn">Sync Canvas</button>
+        <button id="runSchedulerBtn" class="btn green">Build Study Plan</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="card span-3">
+        <div class="label">Past Due</div>
+        <div id="pastDueCount" class="big">0</div>
+        <div class="status red">Needs attention</div>
+      </section>
+      <section class="card span-3">
+        <div class="label">Current Assignments</div>
+        <div id="currentCount" class="big">0</div>
+        <div class="status purple">In progress</div>
+      </section>
+      <section class="card span-3">
+        <div class="label">Selected Assignment</div>
+        <div id="selectedTitle" class="big" style="font-size:18px">None selected</div>
+        <div class="muted tiny" id="selectedClass">Choose an assignment below</div>
+      </section>
+      <section class="card span-3">
+        <div class="label">Today</div>
+        <div id="todayPlanCount" class="big">0</div>
+        <div class="status green">Study blocks ready</div>
+      </section>
+
+      <section class="card span-4">
+        <div class="section-title">
+          <h2>Assignments</h2>
+          <span class="tiny muted">Past due + current from Canvas</span>
+        </div>
+        <div id="assignmentList" class="list"></div>
+        <div class="footer-note">Click one assignment, then run Homework Helper.</div>
+      </section>
+
+      <section class="card span-8">
+        <div class="section-title">
+          <h2>AI Homework Helper</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="runHelperBtn" class="btn orange">Run Helper</button>
+            <button id="copyHelperBtn" class="btn secondary">Copy</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label class="label" style="display:block;margin-bottom:6px">Assignment Text</label>
+            <textarea id="assignmentText"></textarea>
+          </div>
+          <div>
+            <label class="label" style="display:block;margin-bottom:6px">Helper Output</label>
+            <div id="helperOutput" class="item helper-box">No helper result yet.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card span-6">
+        <div class="section-title">
+          <h2>Smart Scheduler</h2>
+          <button id="sendToCalendarBtn" class="btn secondary">Send to Calendar</button>
+        </div>
+        <div class="row">
+          <div>
+            <label class="label" style="display:block;margin-bottom:6px">Schedule Notes</label>
+            <textarea id="schedulePrompt">Build a realistic study plan with tutoring time, catch-up time, and mom follow-up time.</textarea>
+          </div>
+          <div>
+            <label class="label" style="display:block;margin-bottom:6px">Planned Blocks</label>
+            <div id="scheduleOutput" class="item helper-box">No schedule yet.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card span-6">
+        <div class="section-title">
+          <h2>Calendar Preview</h2>
+          <span class="tiny muted">What will be added to Google Calendar</span>
+        </div>
+        <div id="calendarPreview" class="calendar-preview">
+          <div class="slot muted">No events yet.</div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+const state = { assignments: [], selectedAssignment: null, helperResult: "", studyPlan: "" };
+
+const demoAssignments = [
+  { id: "1", course: "English 101", name: "Essay Draft", due_at: "2026-03-26", status: "past_due", description: "Write a 2-page essay on why school matters and include 2 sources." },
+  { id: "2", course: "Biology 110", name: "Cell Worksheet", due_at: "2026-03-27", status: "current", description: "Complete the cell structure worksheet and label each part." },
+  { id: "3", course: "Spanish 102", name: "Vocabulary Practice", due_at: "2026-03-28", status: "current", description: "Study chapter vocabulary and complete the online practice." }
+];
+
+function byId(id){ return document.getElementById(id); }
+
+function renderStats(){
+  const pastDue = state.assignments.filter(a => a.status === 'past_due').length;
+  const current = state.assignments.filter(a => a.status !== 'past_due').length;
+  byId('pastDueCount').textContent = pastDue;
+  byId('currentCount').textContent = current;
+  byId('todayPlanCount').textContent = state.studyPlan ? parseStudyPlan(state.studyPlan).length : 0;
+}
+
+function renderAssignments(){
+  const list = byId('assignmentList');
+  list.innerHTML = '';
+  if(!state.assignments.length){
+    list.innerHTML = '<div class="item muted">No assignments loaded yet.</div>';
+    return;
+  }
+  state.assignments.forEach(a => {
+    const div = document.createElement('div');
+    div.className = 'item assignment' + (state.selectedAssignment && state.selectedAssignment.id === a.id ? ' active' : '');
+    div.innerHTML = `
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:start">
+        <div>
+          <div style="font-weight:800">${a.name}</div>
+          <div class="tiny muted">${a.course}</div>
+          <div class="tiny muted">Due: ${a.due_at || 'No date'}</div>
+        </div>
+        <span class="pill ${a.status==='past_due'?'red':a.status==='current'?'orange':'green'}">${a.status.replace('_',' ')}</span>
+      </div>
+      <div class="tiny muted" style="margin-top:8px">${a.description || ''}</div>
+    `;
+    div.onclick = () => selectAssignment(a.id);
+    list.appendChild(div);
+  });
+}
+
+function selectAssignment(id){
+  state.selectedAssignment = state.assignments.find(a => a.id === id) || null;
+  byId('selectedTitle').textContent = state.selectedAssignment ? state.selectedAssignment.name : 'None selected';
+  byId('selectedClass').textContent = state.selectedAssignment ? state.selectedAssignment.course : 'Choose an assignment below';
+  byId('assignmentText').value = state.selectedAssignment ? (state.selectedAssignment.description || '') : '';
+  renderAssignments();
+}
+
+function renderCalendarPreview(events){
+  const box = byId('calendarPreview');
+  if(!events.length){
+    box.innerHTML = '<div class="slot muted">No events yet.</div>';
+    return;
+  }
+  box.innerHTML = events.map(e => `
+    <div class="slot">
+      <div style="font-weight:800">${e.title}</div>
+      <div class="tiny muted">${e.time}</div>
+    </div>
+  `).join('');
+}
+
+function parseStudyPlan(text){
+  return text.split('\n').map(x => x.trim()).filter(Boolean).map((line, i) => ({ title: line, time: 'Suggested block ' + (i+1) }));
+}
+
+async function safeFetch(url, options){
+  const res = await fetch(url, options);
+  if(!res.ok) throw new Error('Request failed: ' + res.status);
+  return await res.json();
+}
+
+function setConnection(id, kind){
+  const el = byId(id);
+  el.className = 'status ' + kind;
+  el.textContent = kind === 'green' ? 'Connected' : kind === 'red' ? 'Error' : 'Mock mode';
+}
+
+async function syncCanvas(){
+  try{
+    const data = await safeFetch('/.netlify/functions/canvas-sync');
+    state.assignments = (data.assignments || []).map((a, idx) => ({
+      id: String(a.id || idx + 1),
+      course: a.course || a.className || 'Course',
+      name: a.name || a.title || 'Assignment',
+      due_at: a.due_at || a.dueDate || '',
+      status: a.status || (a.isPastDue ? 'past_due' : 'current'),
+      description: a.description || a.assignmentText || ''
+    }));
+    setConnection('canvasState', 'green');
+  }catch(e){
+    state.assignments = demoAssignments;
+    setConnection('canvasState', 'orange');
+  }
+  if(state.assignments.length && !state.selectedAssignment) selectAssignment(state.assignments[0].id);
+  renderAssignments();
+  renderStats();
+}
+
+async function runHelper(){
+  if(!state.selectedAssignment){
+    alert('Pick an assignment first.');
+    return;
+  }
+  const payload = {
+    className: state.selectedAssignment.course,
+    assignmentTitle: state.selectedAssignment.name,
+    assignmentText: byId('assignmentText').value.trim() || state.selectedAssignment.description || ''
+  };
+  byId('helperOutput').textContent = 'Working...';
+  try{
+    const data = await safeFetch('/.netlify/functions/homework-helper', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    state.helperResult = data.result || 'No result returned.';
+    setConnection('geminiState', 'green');
+  }catch(e){
+    state.helperResult = `Mock helper result for ${payload.assignmentTitle}
+
+1. Read the directions one time.
+2. Highlight the action words.
+3. Make a short outline.
+4. Finish the first small part today.
+5. Review and submit.`;
+    setConnection('geminiState', 'orange');
+  }
+  byId('helperOutput').textContent = state.helperResult;
+}
+
+async function runScheduler(){
+  byId('scheduleOutput').textContent = 'Building plan...';
+  try{
+    const data = await safeFetch('/.netlify/functions/google-scheduler', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        prompt: byId('schedulePrompt').value.trim(),
+        assignments: state.assignments,
+        selectedAssignment: state.selectedAssignment,
+        helperResult: state.helperResult
+      })
+    });
+    state.studyPlan = data.result || 'No schedule returned.';
+    setConnection('calendarState', 'green');
+  }catch(e){
+    state.studyPlan =
+`Today 4:00 PM - 4:45 PM: Finish first half of ${state.selectedAssignment ? state.selectedAssignment.name : 'current assignment'}
+Today 5:00 PM - 5:30 PM: Mom review and check-in
+Tomorrow 3:30 PM - 4:30 PM: Catch-up on past due work
+Tomorrow 5:00 PM - 5:45 PM: Tutoring / homework helper time`;
+    setConnection('calendarState', 'orange');
+  }
+  byId('scheduleOutput').textContent = state.studyPlan;
+  renderStats();
+  renderCalendarPreview(parseStudyPlan(state.studyPlan));
+}
+
+async function sendToCalendar(){
+  if(!state.studyPlan){
+    alert('Build the study plan first.');
+    return;
+  }
+  try{
+    await safeFetch('/.netlify/functions/google-calendar-create', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ planText: state.studyPlan })
+    });
+    alert('Calendar request sent.');
+    setConnection('calendarState', 'green');
+  }catch(e){
+    alert('Calendar function not connected yet. The preview is ready though.');
+    setConnection('calendarState', 'orange');
+  }
+}
+
+byId('syncCanvasBtn').onclick = syncCanvas;
+byId('runHelperBtn').onclick = runHelper;
+byId('runSchedulerBtn').onclick = runScheduler;
+byId('sendToCalendarBtn').onclick = sendToCalendar;
+byId('copyHelperBtn').onclick = async () => {
+  try{ await navigator.clipboard.writeText(byId('helperOutput').textContent); alert('Copied.'); }
+  catch(e){ alert('Copy failed.'); }
+};
+
+renderAssignments();
+renderStats();
+</script>
+</body>
+</html>
